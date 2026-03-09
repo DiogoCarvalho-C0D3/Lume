@@ -18,6 +18,13 @@ services:
       - "3000:3000"
     environment:
       - DATABASE_URL=postgres://lume_user:lume_pass@db:5432/lume_db
+      - OS_API_BASE_URL=http://your-outsystems-server.com
+      - OS_API_USERNAME=admin
+      - OS_API_PASSWORD=password
+      - SQL_SERVER_HOST=your-sql-server.com
+      - SQL_SERVER_USER=lume_readonly
+      - SQL_SERVER_PASSWORD=password
+      - SQL_SERVER_DATABASE=os_platform
       - NODE_ENV=development
     depends_on:
       - db

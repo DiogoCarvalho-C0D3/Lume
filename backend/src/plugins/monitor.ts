@@ -26,15 +26,51 @@ export default fp(async (fastify) => {
         lastChecked: new Date().toISOString()
     });
 
+    // OutSystems API Consumer logic
+    const fetchPerformanceMetrics = async () => {
+        const baseUrl = process.env.OS_API_BASE_URL;
+        if (!baseUrl || baseUrl.includes('your-outsystems-server')) {
+            return null; // Stick to mocks if not configured
+        }
+
+        try {
+            const endpoint = `${baseUrl}/PerformanceProbe/rest/PerformanceMonitoringAPI/RequestEvents/`;
+            const response = await fetch(endpoint, {
+                headers: {
+                    'Authorization': `Basic ${Buffer.from(`${process.env.OS_API_USERNAME}:${process.env.OS_API_PASSWORD}`).toString('base64')}`
+                }
+            });
+
+            if (!response.ok) throw new Error(`OS API status: ${response.status}`);
+
+            const data = await response.json() as any[];
+            // Calculate integrity based on request success rate or presence of data
+            return {
+                value: data.length > 0 ? 99.5 : 100, // Placeholder calculation
+                status: 'optimal' as const
+            };
+        } catch (err) {
+            fastify.log.error('Lume Monitor: OS Performance API call failed', err);
+            return null;
+        }
+    };
+
     // Background monitoring loop
     const runMonitor = async () => {
+        const osPerformance = await fetchPerformanceMetrics();
+
         // 1. Monitor BPT Health
         const bpt = metrics.get('bpt-app')!;
-        // Simulate slight fluctuation
-        bpt.value = 98 + Math.random() * 2;
+        if (osPerformance) {
+            bpt.value = osPerformance.value;
+            bpt.status = osPerformance.status;
+        } else {
+            // Simulate slight fluctuation (Mock fallback)
+            bpt.value = 98 + Math.random() * 2;
+        }
         bpt.lastChecked = new Date().toISOString();
 
-        // 2. Simulate OutSystems Log Count
+        // 2. Simulate OutSystems Log Count (Placeholder for SQL Server integration)
         const logs = metrics.get('outsystems-logs')!;
         logs.value = Math.floor(5000 + Math.random() * 500);
         logs.lastChecked = new Date().toISOString();

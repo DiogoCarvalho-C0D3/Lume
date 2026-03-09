@@ -49,6 +49,16 @@
         fetchLogs();
     }
 
+    let selectedLog = $state<any>(null);
+
+    function openLog(log: any) {
+        selectedLog = log;
+    }
+
+    function closeLog() {
+        selectedLog = null;
+    }
+
     onMount(() => {
         fetchMetrics();
         fetchLogs();
@@ -161,7 +171,10 @@
                 </thead>
                 <tbody>
                     {#each logs as log}
-                        <tr class="log-row">
+                        <tr
+                            class="log-row clickable"
+                            onclick={() => openLog(log)}
+                        >
                             <td class="timestamp"
                                 >{new Date(
                                     log.timestamp,
@@ -184,6 +197,76 @@
             </table>
         </div>
     </section>
+
+    {#if selectedLog}
+        <div
+            class="modal-backdrop"
+            onclick={closeLog}
+            onkeydown={(e) => e.key === "Escape" && closeLog()}
+            role="button"
+            tabindex="0"
+            aria-label="Close modal"
+        >
+            <div
+                class="log-detail-modal glass glow-shadow-blue"
+                onclick={(e) => e.stopPropagation()}
+                role="document"
+            >
+                <header class="modal-header">
+                    <div class="modal-title">
+                        <span
+                            class="level-indicator {selectedLog.level.toLowerCase()}"
+                            >{selectedLog.level}</span
+                        >
+                        <h2>{selectedLog.id} Detail</h2>
+                    </div>
+                    <button
+                        class="close-btn"
+                        onclick={closeLog}
+                        aria-label="Close detail view">&times;</button
+                    >
+                </header>
+
+                <div class="modal-body">
+                    <div class="detail-grid">
+                        <div class="detail-item">
+                            <span class="detail-label">Timestamp</span>
+                            <span class="detail-value"
+                                >{new Date(
+                                    selectedLog.timestamp,
+                                ).toLocaleString()}</span
+                            >
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Environment</span>
+                            <span class="detail-value"
+                                >{selectedLog.environment}</span
+                            >
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Module</span>
+                            <span class="detail-value badge"
+                                >{selectedLog.module}</span
+                            >
+                        </div>
+                    </div>
+
+                    <div class="message-section">
+                        <span class="detail-label">Message</span>
+                        <p class="full-message">{selectedLog.message}</p>
+                    </div>
+
+                    {#if selectedLog.stack_trace || selectedLog.stackTrace}
+                        <div class="stack-trace-section">
+                            <span class="detail-label">Stack Trace</span>
+                            <pre class="stack-trace">{selectedLog.stack_trace ||
+                                    selectedLog.stackTrace}</pre>
+                        </div>
+                    {/if}
+                </div>
+            </div>
+        </div>
+    {/if}
 </div>
 
 <style>
@@ -412,6 +495,158 @@
         color: var(--primary-glow);
     }
 
+    .clickable {
+        cursor: pointer;
+    }
+
+    .clickable:hover {
+        background: rgba(255, 255, 255, 0.05) !important;
+        box-shadow: inset 0 0 10px rgba(0, 163, 255, 0.1);
+    }
+
+    .modal-backdrop {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        background: rgba(0, 0, 0, 0.8);
+        backdrop-filter: blur(8px);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 1000;
+        animation: fadeIn 0.3s ease-out;
+    }
+
+    .log-detail-modal {
+        width: 800px;
+        max-width: 90%;
+        max-height: 80vh;
+        background: var(--surface-color);
+        border: 1px solid var(--border-color);
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        animation: scaleIn 0.3s ease-out;
+    }
+
+    .modal-header {
+        padding: 24px;
+        border-bottom: 1px solid var(--border-color);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .modal-title {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+    }
+
+    .modal-title h2 {
+        font-size: 1.2rem;
+        margin: 0;
+        color: var(--text-primary);
+    }
+
+    .close-btn {
+        background: transparent;
+        border: none;
+        color: var(--text-muted);
+        font-size: 2rem;
+        cursor: pointer;
+        transition: var(--t-smooth);
+    }
+
+    .close-btn:hover {
+        color: var(--text-primary);
+    }
+
+    .modal-body {
+        padding: 24px;
+        overflow-y: auto;
+        display: flex;
+        flex-direction: column;
+        gap: 24px;
+    }
+
+    .detail-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 16px;
+    }
+
+    .detail-item {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .detail-item label {
+        font-size: 0.7rem;
+        color: var(--text-muted);
+        text-transform: uppercase;
+        letter-spacing: 1px;
+    }
+
+    .detail-item span {
+        font-size: 0.9rem;
+        color: var(--text-secondary);
+    }
+
+    .message-section label,
+    .stack-trace-section label {
+        display: block;
+        font-size: 0.7rem;
+        color: var(--text-muted);
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        margin-bottom: 12px;
+    }
+
+    .full-message {
+        font-size: 1rem;
+        line-height: 1.6;
+        color: var(--text-primary);
+        background: rgba(255, 255, 255, 0.02);
+        padding: 16px;
+        border-radius: 8px;
+        border-left: 4px solid var(--primary-glow);
+    }
+
+    .stack-trace {
+        font-family: "JetBrains Mono", monospace;
+        font-size: 0.75rem;
+        background: #000;
+        padding: 16px;
+        border-radius: 8px;
+        overflow-x: auto;
+        color: var(--text-secondary);
+        border: 1px solid var(--border-color);
+        line-height: 1.5;
+    }
+
+    @keyframes fadeIn {
+        from {
+            opacity: 0;
+        }
+        to {
+            opacity: 1;
+        }
+    }
+
+    @keyframes scaleIn {
+        from {
+            transform: scale(0.95);
+            opacity: 0;
+        }
+        to {
+            transform: scale(1);
+            opacity: 1;
+        }
+    }
     /* ... existing styles ... */
     .log-spotlight {
         margin-top: 24px;
