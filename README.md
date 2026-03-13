@@ -1,32 +1,50 @@
 # Lume - OutSystems Infrastructure Monitoring 🕯️
 
-Lume is a high-performance, real-time monitoring solution designed specifically for OutSystems infrastructure. It "illuminates" the health of your environment using modern tech stacks and premium visual feedback.
+Lume is a high-performance, real-time monitoring solution designed specifically for OutSystems infrastructure. It "illuminates" the health of your environment using modern tech stacks and premium visual feedback, providing actionable insights into performance and reliability.
 
-![Lume Light Board Mockup](./brain/3009b889-6d01-45b4-8c57-3d9691d9bb44/lume_light_board_mockup_1773067896438.png)
+![Lume Light Board Mockup](./docs/assets/dashboard_mockup.png)
 
 ## 🌟 Key Features
 
-- **The Light Board (Real-time Health)**: A "glassmorphism" dashboard providing instant visual status of OutSystems nodes, request rates, and error frequencies.
-- **Log Spotlight (Deep Search)**: An advanced log explorer with "drill-down" capabilities into OSLOG_ tables and Performance Monitoring APIs.
-- **Predictive Alerts**: Pattern-matching engine that identifies performance trends before they become critical issues.
-- **OutSystems Integration**: Native support for PerformanceMonitoring API and direct SQL Server log table consumption.
-
-## 🚀 Tech Stack
-
-- **Frontend**: SvelteKit (Fast, reactive, low runtime overhead).
-- **Backend**: Node.js + Fastify (High performance, low overhead).
-- **Database**: TimescaleDB (PostgreSQL extension for optimized time-series data).
-- **Cloud Infrastructure**: AWS ECS (Fargate), Application Load Balancer (ALB), RDS PostgreSQL.
+- **The Light Board (Real-time Health)**: A glassmorphism-inspired dashboard providing instant visual status of OutSystems nodes, request rates, and error frequencies.
+- **Log Spotlight (Deep Search)**: An advanced log explorer with drill-down capabilities into `OSLOG_` tables and Performance Monitoring APIs.
+- **Predictive Alerts**: A pattern-matching engine that identifies performance trends before they become critical issues.
+- **OutSystems Integration**: Native support for PerformanceMonitoring API and direct consumption of SQL Server log tables.
+- **Enterprise-Grade Security**: Integrated with AWS SSM (Parameter Store) and IAM for secure credential and log management.
 
 ## 🏗️ Architecture
 
-Lume is built for scalability and security:
-- **Scalable Compute**: Containers running on ECS Fargate (Private Subnets).
-- **Traffic Routing**: Application Load Balancer (ALB) handles path-based routing (`/api/*` to Backend, `/` to Frontend).
-- **Secure Secrets**: Database and API credentials are never hardcoded; they are retrieved at runtime via **AWS SSM Parameter Store**.
-- **CI/CD**: Automated build and push to ECR via GitHub Actions.
+Lume is built for scalability and security using a distributed containerized approach:
 
-## 🛠️ Local Development
+```mermaid
+graph TD
+    User((User)) --> ALB[Application Load Balancer]
+    ALB -->|Port 80/443| FE_Service[ECS Fargate: Frontend]
+    FE_Service -->|Internal| BE_Service[ECS Fargate: Backend]
+    BE_Service -->|SQL| RDS[(RDS for PostgreSQL + TimescaleDB)]
+    BE_Service -->|HTTPS| OS_API[OutSystems APIs]
+    BE_Service -->|TDS| OS_SQL[OutSystems SQL Server]
+```
+
+### Technical Components:
+- **Frontend**: SvelteKit (Fast, reactive, low runtime overhead).
+- **Backend**: Node.js + Fastify (High performance, low overhead).
+- **Database**: TimescaleDB (PostgreSQL extension optimized for time-series monitoring data).
+- **Infrastructure**: AWS ECS (Fargate), Application Load Balancer (ALB), and RDS.
+
+## 🛠️ Infrastructure & Deployment
+
+### Scalable Compute
+Containers run on **AWS ECS Fargate** within Private Subnets for maximum isolation and security. Public traffic is managed by an **Application Load Balancer (ALB)**, handling path-based routing (`/api/*` to Backend, `/` to Frontend).
+
+### Secure Configuration
+- **AWS SSM Parameter Store**: Database and API credentials are retrieved at runtime.
+- **IAM Policies**: Minimum privilege roles (ECS Task Execution Role) for ECR pulls and CloudWatch logging.
+
+### CI/CD
+Automated build and push to ECR via **GitHub Actions**. Deployment ensures zero-downtime through Fargate rolling updates.
+
+## 🚀 Local Development
 
 ### Prerequisites
 - Node.js 18+
@@ -34,38 +52,24 @@ Lume is built for scalability and security:
 
 ### Setup
 1. Clone the repository.
-2. Configure environment variables in `backend/.env` and `frontend/.env`.
-3. Start the developmental database:
+2. Initialize the database:
    ```bash
    docker-compose up -d database
    ```
-4. Run Backend:
+3. Run Backend:
    ```bash
-   cd backend
-   npm install && npm run dev
+   cd backend && npm install && npm run dev
    ```
-5. Run Frontend:
+4. Run Frontend:
    ```bash
-   cd frontend
-   npm install && npm run dev
+   cd frontend && npm install && npm run dev
    ```
 
-## ☁️ Deployment
-
-Deployment is automated via GitHub Actions.
-
-1. Configure GitHub Secrets: `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`.
-2. Push to `main` branch to trigger the build.
-3. Run the deployment script for infrastructure updates:
-   ```powershell
-   .\deploy-lume-aws.ps1
-   ```
-
-## 📄 Documentation
-
-- [Implementation Plan](./brain/3009b889-6d01-45b4-8c57-3d9691d9bb44/implementation_plan.md)
-- [Walkthrough & Proof of Work](./brain/3009b889-6d01-45b4-8c57-3d9691d9bb44/walkthrough.md)
-- [AWS Deployment Guide](./brain/3009b889-6d01-45b4-8c57-3d9691d9bb44/aws_deployment_guide.md)
+## 📈 Project Milestones & Reliability
+During development, the infrastructure underwent rigorous testing and optimization:
+- **IAM Hardening**: Transitioned to precise IAM policies for secure image pulling and centralized logging.
+- **Service Resilience**: Resolved 503 error states by ensuring health check grace periods and proper task life-cycle management.
+- **Security Compliance**: Implemented host validation in Vite to secure frontend traffic coming from the Load Balancer.
 
 ---
-*Created for high-performance OutSystems monitoring.*
+*Developed for high-performance OutSystems monitoring as part of a Master's Thesis.*
