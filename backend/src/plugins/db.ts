@@ -46,7 +46,7 @@ export default fp(async (fastify) => {
         }
 
         client.release();
-    } catch (err) {
+    } catch (err: any) {
         fastify.log.error('Lume Database: Connection failed', err);
         // In production, we might want to exit, but for dev we let it retry or stay disconnected
     }

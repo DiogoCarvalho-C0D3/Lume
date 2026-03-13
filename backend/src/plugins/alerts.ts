@@ -20,8 +20,8 @@ export default fp(async (fastify) => {
     ];
 
     // Simple pattern detection simulation
-    const checkPatterns = () => {
-        const logs = fastify.lumeLogs.search();
+    const checkPatterns = async () => {
+        const logs = await fastify.lumeLogs.search();
         const recentErrors = logs.filter(l =>
             l.level === 'Error' &&
             new Date(l.timestamp).getTime() > Date.now() - 1000 * 60 * 60
@@ -31,7 +31,7 @@ export default fp(async (fastify) => {
             alerts.push({
                 id: `ALT-${Date.now()}`,
                 type: 'CRITICAL',
-                message: `High frequency of errors (${recentErrors.length} in last hour) detected in ${recentErrors[0].module}.`,
+                message: `High frequency of errors (${recentErrors.length} in last hour) detected in ${recentErrors[0]?.module}.`,
                 timestamp: new Date().toISOString(),
                 confidence: 0.95
             });

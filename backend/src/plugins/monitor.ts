@@ -49,7 +49,7 @@ export default fp(async (fastify) => {
                 value: data.length > 0 ? 99.5 : 100, // Placeholder calculation
                 status: 'optimal' as const
             };
-        } catch (err) {
+        } catch (err: any) {
             fastify.log.error('Lume Monitor: OS Performance API call failed', err);
             return null;
         }
@@ -89,7 +89,7 @@ export default fp(async (fastify) => {
             );
 
             fastify.log.info('Lume Monitor: Metrics persisted to DB');
-        } catch (err) {
+        } catch (err: any) {
             fastify.log.error('Lume Monitor: Failed to persist metrics', err);
         }
     };

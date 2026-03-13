@@ -1,12 +1,13 @@
 import Fastify from 'fastify';
-import cors from '@fastify/cors';
-import monitorPlugin from './plugins/monitor.js';
-import logsPlugin from './plugins/logs.js';
-import alertsPlugin from './plugins/alerts.js';
-import dbPlugin from './plugins/db.js';
-import metricsRoutes from './routes/metrics.js';
-import logsRoutes from './routes/logs.js';
-import alertsRoutes from './routes/alerts.js';
+// @ts-ignore
+import * as cors from '@fastify/cors';
+import monitorPlugin from './plugins/monitor';
+import logsPlugin from './plugins/logs';
+import alertsPlugin from './plugins/alerts';
+import dbPlugin from './plugins/db';
+import metricsRoutes from './routes/metrics';
+import logsRoutes from './routes/logs';
+import alertsRoutes from './routes/alerts';
 
 const fastify = Fastify({
   logger: true

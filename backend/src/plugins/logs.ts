@@ -48,7 +48,7 @@ export default fp(async (fastify) => {
             });
             if (!response.ok) throw new Error(`OS Logs API error: ${response.status}`);
             return await response.json() as any[];
-        } catch (err) {
+        } catch (err: any) {
             fastify.log.error('Lume Logs: Failed to fetch from REST API', err);
             return null;
         }
