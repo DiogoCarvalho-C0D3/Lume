@@ -10,7 +10,7 @@
 
     async function fetchMetrics() {
         try {
-            const response = await fetch("http://localhost:3000/api/metrics");
+            const response = await fetch("/api/metrics");
             metrics = await response.json();
 
             // Calculate a rough global health for the orb
@@ -26,7 +26,7 @@
 
     async function fetchLogs() {
         try {
-            const url = new URL("http://localhost:3000/api/logs");
+            const url = new URL("/api/logs", window.location.origin);
             if (searchQuery) url.searchParams.append("query", searchQuery);
             const response = await fetch(url);
             logs = await response.json();
@@ -37,7 +37,7 @@
 
     async function fetchAlerts() {
         try {
-            const response = await fetch("http://localhost:3000/api/alerts");
+            const response = await fetch("/api/alerts");
             alerts = await response.json();
         } catch (e) {
             console.error("Failed to fetch alerts", e);
