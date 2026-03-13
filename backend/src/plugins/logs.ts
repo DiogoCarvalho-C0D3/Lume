@@ -20,21 +20,39 @@ export default fp(async (fastify) => {
         password: process.env.SQL_SERVER_PASSWORD || '',
         database: process.env.SQL_SERVER_DATABASE || '',
         server: process.env.SQL_SERVER_HOST || '',
-        pool: { max: 10, min: 0, idleTimeoutMillis: 30000 },
-        options: { encrypt: true, trustServerCertificate: true }
+        pool: { max: 5, min: 0, idleTimeoutMillis: 30000 },
+        options: { encrypt: true, trustServerCertificate: true, connectTimeout: 3000 }
     };
 
     let sqlPool: sql.ConnectionPool | null = null;
     const isSQLConfigured = sqlConfig.server && !sqlConfig.server.includes('your-sql-server');
+    const logApiUrl = process.env.OS_LOG_API_URL;
 
     if (isSQLConfigured) {
         try {
             sqlPool = await new sql.ConnectionPool(sqlConfig).connect();
             fastify.log.info('Lume Logs: Connected to OS SQL Server');
         } catch (err) {
-            fastify.log.error('Lume Logs: OS SQL Server connection failed', err);
+            fastify.log.warn('Lume Logs: OS SQL Server connection failed (VPN/Network restricted). Falling back to APIs or Mocks.');
         }
     }
+
+    // Helper to fetch logs from REST API
+    const fetchLogsFromAPI = async () => {
+        if (!logApiUrl) return null;
+        try {
+            const response = await fetch(logApiUrl, {
+                headers: {
+                    'Authorization': `Basic ${Buffer.from(`${process.env.OS_API_USERNAME}:${process.env.OS_API_PASSWORD}`).toString('base64')}`
+                }
+            });
+            if (!response.ok) throw new Error(`OS Logs API error: ${response.status}`);
+            return await response.json() as any[];
+        } catch (err) {
+            fastify.log.error('Lume Logs: Failed to fetch from REST API', err);
+            return null;
+        }
+    };
 
     // Initial Seed for Showcase (if table is empty)
     const seedLogs = async () => {
@@ -67,6 +85,29 @@ export default fp(async (fastify) => {
 
     seedLogs().catch(err => fastify.log.error('Lume Logs: Seeding failed', err));
 
+    // Background Ingestion Worker
+    const ingestLogs = async () => {
+        const logs = await fetchLogsFromAPI();
+        if (logs && Array.isArray(logs)) {
+            fastify.log.info(`Lume Logs: Ingesting ${logs.length} logs from API`);
+            for (const log of logs) {
+                try {
+                    await db.query(
+                        'INSERT INTO logs (time, id, module, level, message, environment, stack_trace) VALUES ($1, $2, $3, $4, $5, $6, $7) ON CONFLICT (time, id) DO NOTHING',
+                        [log.time || log.Instant, log.id || log.Id, log.module || log.Module_Name, log.level || log.Entry_Level || 'Error', log.message || log.Message, log.environment || log.Environment_Name || 'Production', log.stack_trace || '']
+                    );
+                } catch (e) {
+                    // Ignore duplicates
+                }
+            }
+        }
+    };
+
+    if (logApiUrl) {
+        setInterval(ingestLogs, 30000); // Every 30 seconds
+        ingestLogs(); 
+    }
+
     fastify.decorate('lumeLogs', {
         search: async (query?: string, module?: string, environment?: string) => {
             // Priority: SQL Server (Real data) -> TimescaleDB (Historical/Fallback)
@@ -88,8 +129,13 @@ export default fp(async (fastify) => {
                     const result = await request.query(sqlQuery);
                     return result.recordset.map(r => ({ ...r, timestamp: r.time, level: r.level || 'Error' }));
                 } catch (err) {
-                    fastify.log.error('Lume Logs: SQL Server query failed, falling back to TimescaleDB', err);
+                    fastify.log.warn('Lume Logs: SQL Server query failed. Falling back to local data.');
                 }
+            }
+
+            // Optional: Live fetch from API if searching and API is configured
+            if (!query && !module && logApiUrl) {
+                // Just let the background worker handle it, or do a quick fetch
             }
 
             // Fallback to TimescaleDB
